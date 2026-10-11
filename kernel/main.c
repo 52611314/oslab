@@ -12,3 +12,27 @@
  *  2. entry.S 里的陷阱向量标号前加 .balign 4(mtvec 要求 4 字节对齐,
  *     不满足时写入会被硬件静默丢弃)。
  */
+#include "types.h"
+#include "riscv.h"
+#include "course_sid.h"
+#include "console.h"
+#include "printf.h"
+
+void main(void) {
+    consoleinit();
+
+    // 输出 banner
+    // LAB1_BANNER_PROTOCOL = 0: 明文 + 换行
+    printf("OSLAB1 sid=%ld mod97=0x%x\n",
+           COURSE_SID, COURSE_SID % 97);
+
+    // printf 边界测试
+    printf("test0=%d\n", 0);
+    printf("testneg=%d\n", -1);
+    printf("testmax=%d\n", 2147483647);
+    printf("testempty=%s\n", "");
+    printf("testlong=%s\n", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+    // 死循环，保持系统运行
+    //while (1) { }
+}

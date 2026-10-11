@@ -12,3 +12,41 @@
  *  2. entry.S 里的陷阱向量标号前加 .balign 4(mtvec 要求 4 字节对齐,
  *     不满足时写入会被硬件静默丢弃)。
  */
+#include "types.h"
+#include "riscv.h"
+#include "course_sid.h"
+
+char stack0[LAB1_STACK_KB * 1024];
+
+// 陷阱入口占位
+__attribute__((aligned(4)))
+void trap_entry(void) {
+    while (1) { }
+}
+
+extern void main(void);
+
+void start(void) {
+    // 1. 配置 mstatus.MPP = S，
+    uint64 x = r_mstatus();
+    x &= ~MSTATUS_MPP_MASK;
+    x |= MSTATUS_MPP_S;
+    w_mstatus(x);
+
+    // 2. 设置 mepc = main
+    w_mepc((uint64)main);
+
+    // 3. 配置 PMP：允许 S/U 态访问全部物理地址
+    w_pmpaddr0(0x3fffffffffffffull);
+    w_pmpcfg0(0xf);
+
+    // 4. 委托所有中断和异常给 S 态
+    w_medeleg(0xffff);
+    w_mideleg(0xffff);
+
+    // 5. 关闭 S 态中断
+    w_sie(0);
+
+    // 6. 执行 mret，降权到 S 态，PC = main
+    asm volatile("mret");
+}

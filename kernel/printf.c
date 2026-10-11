@@ -12,3 +12,105 @@
  *  2. entry.S 里的陷阱向量标号前加 .balign 4(mtvec 要求 4 字节对齐,
  *     不满足时写入会被硬件静默丢弃)。
  */
+#include "types.h"
+#include "console.h"
+typedef __builtin_va_list va_list;
+#define va_start(ap, last) __builtin_va_start(ap, last)
+#define va_arg(ap, type) __builtin_va_arg(ap, type)
+#define va_end(ap) __builtin_va_end(ap)
+// 输出一个字符
+static void putc(char c) {
+    consoleputc(c);
+}
+
+// 输出字符串
+static void puts(const char *s) {
+    while (*s) {
+        putc(*s++);
+    }
+}
+
+// 输出无符号整数，base 10 或 16
+static void printuint(uint64 x, int base) {
+    char buf[32];
+    int i = 0;
+    if (x == 0) {
+        putc('0');
+        return;
+    }
+    while (x > 0) {
+        int d = x % base;
+        buf[i++] = (d < 10) ? ('0' + d) : ('a' + d - 10);
+        x /= base;
+    }
+    while (i > 0) {
+        putc(buf[--i]);
+    }
+}
+
+// 输出有符号整数
+static void printint(int64 x) {
+    if (x < 0) {
+        putc('-');
+        printuint((uint64)(-x), 10);
+    } else {
+        printuint((uint64)x, 10);
+    }
+}
+
+// 最小 printf，支持 %d %x %s %c %% %l
+void printf(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    for (const char *p = fmt; *p; p++) {
+        if (*p != '%') {
+            putc(*p);
+            continue;
+        }
+        p++;
+        switch (*p) {
+        case 'd':
+            printint(va_arg(ap, int));
+            break;
+        case 'x':
+            printuint(va_arg(ap, uint64), 16);
+            break;
+        case 's': {
+            char *s = va_arg(ap, char*);
+            if (s == 0) s = "(null)";
+            puts(s);
+            break;
+        }
+        case 'c':
+            putc((char)va_arg(ap, int));
+            break;
+        case '%':
+            putc('%');
+            break;
+        case 'l':
+            p++;
+            if (*p == 'd') {
+                // 按 int64 输出
+                int64 v = va_arg(ap, int64);
+                if (v < 0) {
+                    putc('-');
+                    printuint((uint64)(-v), 10);
+                } else {
+                    printuint((uint64)v, 10);
+                }
+            } else if (*p == 'u') {
+                printuint(va_arg(ap, uint64), 10);
+            } else {
+                putc('%');
+                putc('l');
+                putc(*p);
+            }
+            break;
+        default:
+            putc('%');
+            putc(*p);
+            break;
+        }
+    }
+    va_end(ap);
+}

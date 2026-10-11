@@ -12,3 +12,36 @@
  *  2. entry.S 里的陷阱向量标号前加 .balign 4(mtvec 要求 4 字节对齐,
  *     不满足时写入会被硬件静默丢弃)。
  */
+#include "types.h"
+#include "riscv.h"
+#include "memlayout.h"
+#include "console.h"
+#include "course_sid.h"
+
+#define LSR 5
+#define THR 0
+#define THROTTLE_PERIOD (16 + COURSE_SID % 16)
+
+static int throttle_count = 0;
+
+// 定义 uartputc_sync
+void uartputc_sync(char c) {
+    while ((*(volatile uint8*)(UART0 + LSR) & (1 << 5)) == 0) { }
+    *(volatile uint8*)(UART0 + THR) = c;
+
+    if (++throttle_count >= THROTTLE_PERIOD) {
+        throttle_count = 0;
+        for (volatile int i = 0; i < 1000; i++) {
+            __asm__ __volatile__("nop");
+        }
+    }
+}
+
+// 定义 consoleputc
+void consoleputc(char c) {
+    uartputc_sync(c);
+}
+
+void consoleinit(void) {
+    // 空
+}

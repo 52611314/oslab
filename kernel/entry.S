@@ -12,3 +12,34 @@
  *  2. entry.S 里的陷阱向量标号前加 .balign 4(mtvec 要求 4 字节对齐,
  *     不满足时写入会被硬件静默丢弃)。
  */
+# kernel/entry.S
+# 启动入口：QEMU 上电后 PC = 0x1000，CPU 在 M 态
+#include "course_sid.h"
+.section .text
+.globl _entry
+
+_entry:
+    # ---- 1. 关中断 ----
+    li t0,8
+    csrc mstatus,t0
+
+    # ---- 2. 设置初始内核栈 ----
+    la sp, stack0
+    li t0, LAB1_STACK_KB * 1024
+    add sp, sp, t0
+
+    # ---- 3. 读 mhartid，如果非0跳转到 park ----
+    csrr t0, mhartid
+    bnez t0, park
+
+    # ---- 4. 设置 mtvec ----
+    la t0, trap_entry
+    csrw mtvec, t0
+
+    # ---- 5. 跳转到 start() ----
+    call start
+
+    # 如果 start 返回了，死循环（正常不会返回）
+park:
+    wfi
+    j park

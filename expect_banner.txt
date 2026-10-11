@@ -1,0 +1,6 @@
+OSLAB1 sid=2024302181049 mod97=0x60
+test0=0
+testneg=-1
+testmax=2147483647
+testempty=
+testlong=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
