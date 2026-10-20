@@ -16,7 +16,8 @@
 #include "riscv.h"
 #include "course_sid.h"
 
-char stack0[LAB1_STACK_KB * 1024];
+// 启动栈按 16 字节对齐，容量沿用个人 Lab1 参数。
+char stack0[LAB1_STACK_KB * 1024] __attribute__((aligned(16)));
 
 // 陷阱入口占位
 __attribute__((aligned(4)))
@@ -46,6 +47,17 @@ void start(void) {
 
     // 5. 关闭 S 态中断
     w_sie(0);
+
+    // Lab2 使用 Bare 模式（satp=0），内核和用户程序直接使用物理地址。
+    w_satp(0);
+    // menvcfg.STCE 允许 S 态通过 stimecmp 设置时钟中断期限。
+    w_menvcfg(r_menvcfg() | MENVCFG_STCE);
+    // mcounteren 第 1 位 TM：允许 S 态读取 time 计数器。
+    w_mcounteren(r_mcounteren() | 2);
+    // 开放 S 态时钟中断来源；S 态还要在 trapinit 中设置 sie.STIE。
+    w_mie(r_mie() | MIE_STIE);
+    // tp 保存 hart 编号，供内核使用；本阶段只运行 hart 0。
+    w_tp(r_mhartid());
 
     // 6. 执行 mret，降权到 S 态，PC = main
     asm volatile("mret");

@@ -1,0 +1,37 @@
+# Lab2 acceptance: banner, shell, official tests, continuous input and overflow.
+# The supplied driver may print boot TIMEOUT because it waits for "$ ".
+EXPECT OSLAB1 sid=2024302181049 mod97=0x60
+EXPECT sh>
+SEND hi
+EXPECT hi: user program running, pid=[1-9][0-9]*
+SEND badecall
+EXPECT TEST-1 PASS: unknown syscalls all return -1
+
+# Send each line as one chunk. In character-stream mode bufstorm counts reads.
+SEND bufstorm
+WAIT 200
+SEND line1
+EXPECT (?m)^line1\nline1$
+SEND line2
+EXPECT (?m)^line2\nline2$
+SEND line3
+EXPECT (?m)^line3\nline3$
+SEND line4
+EXPECT (?m)^line4\nline4$
+EXPECT BUFSTORM lines=4 bytes=24
+
+# Require ten completed commands after bufstorm, not a previous hi result.
+REPEAT 10 hi
+EXPECT (?s)BUFSTORM lines=4 bytes=24\nsh> (?:.*?hi: user program running, pid=[1-9][0-9]*\nsh> ){10}
+
+# spin is infinite and is therefore the last program.
+SEND spin
+EXPECT (?m)^spin 0$
+WAIT 200
+SEND UART_CHECK
+EXPECT (?s)spin 0\n.*UART_CHECK\n.*spin [0-9]+
+WAIT 200
+
+# 96 bytes plus newline exceeds the personalized 64-byte buffer.
+SEND XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+EXPECT (?s)X.*X\n.*spin [0-9]+

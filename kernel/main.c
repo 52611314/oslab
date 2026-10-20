@@ -17,6 +17,7 @@
 #include "course_sid.h"
 #include "console.h"
 #include "printf.h"
+#include "proc.h"
 
 void main(void) {
     consoleinit();
@@ -33,6 +34,12 @@ void main(void) {
     printf("testempty=%s\n", "");
     printf("testlong=%s\n", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
-    // 死循环，保持系统运行
-    //while (1) { }
+    
+    procinit();
+    
+    trapinit();
+    
+    userinit();
+  
+    scheduler();
 }
